@@ -1,0 +1,102 @@
+### Case 2a: Initialize new job (inline DSL)
+- job:
+    name: "hello"
+    project-type: "pipeline"
+    triggers:
+      - timed: "0 12 * * *"
+    properties:
+      - build-discarder:
+          num-to-keep: 10
+    dsl: |
+      stage("Test") { 
+          echo "Hello!"
+      }
+
+### Case 2b: Initialize new job (from SCM)
+- job:
+    name: "test-job"
+    project-type: "pipeline"
+    pipeline-scm:
+      scm:
+        - git:
+            url: "git@github.com/some/repo"
+            credentials-id: "some-id"
+            branches:
+              - "master"
+            shallow-clone: true
+      script-path: "jenkinsfiles/case2.groovy"
+
+### Case 3: Initialize many jobs from template
+- job-template:
+    name: "{name}/echo-{str}"
+    project-type: "pipeline"
+    dsl: |
+      stage('Echo') {{
+        echo "{str}"
+      }}
+
+- job:
+    name: "test-project"
+    project-type: "folder"
+
+- project:
+    name: "test-project"
+    jobs:
+      - "{name}/echo-{str}":
+          str: "hello"
+      - "{name}/echo-{str}":
+          str: "goodbye"
+
+### Case 4: Initialize many from SCM with params
+- job-template:
+    name: "echo-{str}"
+    project-type: "pipeline"
+    parameters:
+      - choice:
+          name: "str"
+          choices:
+            - "{str}"
+    pipeline-scm:
+      scm:
+        - "predefined-scm"
+      script-path: "jenkinsfiles/case4.groovy"
+
+- job:
+    name: "test-project2"
+    project-type: "folder"
+
+- project:
+    name: "test-project2"
+    jobs:
+      - "{name}/echo-{str}":
+          str: "hello"
+      - "{name}/echo-{str}":
+          str: "goodbye"
+
+### Case 5: Initialize many from SCM with params
+- scm:
+    name: "bb"
+    scm: &bb
+      - bitbucket:
+          repo-owner: "test"
+          repo: "test"
+          discover-branch: "ex-pr"
+          checkout-over-ssh:
+            credentials: "qwer"
+          filter-by-name-wildcard:
+            includes: "*"
+            excludes: "feature/* release/* fix/*"
+          shallow-clone: true
+          submodule:
+            disable: false
+            recursive: true
+            parent-credentials: true
+          wipe-workspace: false
+
+- job:
+    name: "test"
+    display-name: "Test Job"
+    project-type: "multibranch"
+    script-path: "Jenkinsfile"
+    periodic-folder-trigger: "2d"
+    scm: *bb
